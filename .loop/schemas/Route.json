@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:loop-engr:schema:Route",
+  "title": "Route",
+  "description": "Arbiter 的路由裁决。Arbiter 是唯一全视角角色,也因此是唯一被允许把实现侧信息翻译成行为级语言的角色:feedback_l2 必须行为级,feedback_l3 可含代码细节。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["to", "note"],
+  "properties": {
+    "to": {
+      "type": "string",
+      "enum": ["retry_l3", "retry_l2", "escalate"],
+      "description": "retry_l3 = 回 Implementer;retry_l2 = 回 UT-Writer(本轮直接重进 L2 内环,不重跑 Implementer、不 bump l3 计数);escalate = 交人类。**第四个值 `spec` 已删除**:L2 内环每轮无条件重产 behaviors,所以判 `spec` 之后发生的事与判 `retry_l2` 逐字相同——一个填了却不改变任何行为的枚举值,只会让裁决记录与事实长期不符。行为清单本身有问题时照样判 `retry_l2` 并在 note 里说明,重产是下一轮的第一步。"
+    },
+    "feedback_l3": {
+      "type": "string",
+      "minLength": 1,
+      "description": "给 Implementer 的反馈;可含代码细节与符号名。"
+    },
+    "feedback_l2": {
+      "type": "string",
+      "minLength": 1,
+      "description": "给 UT-Writer 的反馈;必须行为级:无源码行号、无行级覆盖、无实现代码。幸存 mutant 的描述在此翻译成\"哪个可观察行为没被测到\"。"
+    },
+    "note": {
+      "type": "string",
+      "pattern": "^sig: \\S+",
+      "description": "首行是 `sig: <token>` —— **人类可读标签,不是比较键**。摆动检测比较的是 `loopctl gate` 输出的 signature(取自失败测试名 / gap kinds / 幸存 mutant 函数名,纯机械):LLM 生成的键不稳定,同一个失败换个措辞就检测不到,重试会一路烧到上限。保留 pattern 只为逼出一个稳定短标签,方便人类在评论里对齐两轮失败。其后可跟自由文本裁决理由。"
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "to": { "const": "retry_l2" } }, "required": ["to"] },
+      "then": { "required": ["feedback_l2"] }
+    },
+    {
+      "if": { "properties": { "to": { "const": "retry_l3" } }, "required": ["to"] },
+      "then": { "required": ["feedback_l3"] }
+    }
+  ]
+}

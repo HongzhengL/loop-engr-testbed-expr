@@ -1,0 +1,174 @@
+# Loop Engine v2 config。人类可改,agent 只读;变更走人审。
+#
+# 这是 `loopctl init` 给的**起始版本**。`loopctl config validate` 现在会拒收它——
+# 那不是故障,是清单:它会逐条报出还没按本仓填的东西。ONBOARDING.md 第 3 节
+# 「必须按本仓调整的项」是同一份清单的人类可读版。
+version: 2
+
+# ⚠ 必改:换成本环境(内网)可用的模型名。档位含义:
+# cheap = 只读侦察 / 转发 / 沟通;mid = 规划与写测;top = 实现与仲裁。
+models:
+  scout: haiku
+  secretary: haiku
+  planner: sonnet
+  ut_writer: sonnet
+  ut_reviewer: sonnet
+  spec_extractor: sonnet
+  librarian: haiku
+  implementer: sonnet
+  arbiter: sonnet
+
+limits:
+  soft_files: 6
+  soft_loc: 400
+  hard_factor: 1.5
+  tick_wall_min: 180
+  role_wall_min: 60
+  # Optional fast-loop circuit breakers. Roles not listed here are bounded by
+  # role_wall_min and the daily model budget, but have no turn-count cap.
+  role_max_turns:
+    scout: 128
+    secretary: 128
+    planner: 64
+    spec_extractor: 64
+    ut_writer: 160
+    ut_reviewer: 48
+    implementer: 120
+    arbiter: 32
+    librarian: 32
+    explainer: 32
+  # 改动落在软硬限之间时,完成度 ≥ 本值才允许收尾,否则推 WIP + 拆分评论。
+  # 完成度 = |touched ∩ plan.files| / |plan.files|,由 `loopctl diffstat --plan` 算。
+  plan_completion_min: 0.80
+
+# 持久于 ticket,不随 tick 重置
+retries:
+  l3: 2
+  l2_writer: 3
+
+quality:
+  diff_line_cov: 0.80
+  mutation_post_l3: 0.80
+  mutation_direct_l2: 0.70
+  k_behaviors: 20
+  equivalent_cap: 0.20
+  mutants_max: 100
+
+# early-exit 需 repo≥target 且 min(pkg)≥floor
+coverage:
+  # ⚠ 必改:按本仓现状定。影子运行的 SHADOW-REPORT.md 会给出当前分布;
+  # 把 target 定在"略高于现状"处,而不是一个理想值——够不到的目标等于没有目标。
+  repo_target: 0.75
+  pkg_floor: 0.40
+  # 契约密度下限:doc_ratio 低于本值且该包没有既有外部测试时,
+  # direct_l2 不写测试(会写成由实现反推的特征化测试),转文档债票。
+  # ⚠ 按影子运行报出的 density 分布校准。
+  min_contract_density: 0.5
+
+ttl:
+  # 只剩这一条。question_days / mr_ping_days 描述的是"没人答就催"
+  # 与"没人评审就催"两个动作,而 v1 里它们没有执行者;两者连同动作一起
+  # 继续后移。留着一个没人读的旋钮,只会让人以为它在跑。
+  claim_hours: 24
+
+quota:
+  wip_mrs: 1
+  agent_tickets_per_day: 2
+  grill_questions: 8
+  grill_rounds: 2
+  lessons_cap: 50
+
+# 当日 token 预算与熔断。必填,缺则 config validate exit 1。
+# ⚠ 必改:键 = Agent SDK modelUsage 返回的**完整 model 串**
+# (如 claude-haiku-4-5-20251001),不是上面 models: 那种别名。
+# 当日出现了没有键的实际模型 → `budget check` exit 2 停跑:那正是"花钱的对象变了"的时刻,
+# 应由人类看一眼再定新上限,而不是带着旧上限或没有上限跑下去。
+# 值 = 当日(UTC+8)input + cache_creation + output 之和的上限(**不含 cache_read**)。
+# 下面是占位值。先跑几天 `loopctl budget report` 看真实分布,再把上限设在
+# "一天正常跑完该跑的活"之上、"跑疯了"之下。
+budget:
+  daily_tokens:
+    claude-opus-5: 2000000
+    claude-sonnet-5: 8000000
+    claude-haiku-4-5-20251001: 20000000
+  # 网关的 costUSD 经过核对后可同时启用；任一额度触顶即停。
+  daily_usd: {}
+  # 网关 costUSD 经核对后可填，例如 claude-opus-5: 100。
+  # 没有 timezone 键:UTC+8 是常量。
+  # 没有 per-tick 上限:limits.tick_wall_min 已经在管单 tick 的失控,两处管同一件事必有一处先漂。
+
+# ⚠ 必改:worktree 根目录,必须在仓库之外(否则剥体树会被 go build ./... 看见)。
+paths:
+  wt_root: ../loop-wt
+
+# 平台数据来源:mcp = 经 MCP 读真实平台;
+# fixture = 读 runtime/platform/{tickets,mrs,comments}.json 快照(loopctl platform validate 校验)。
+# 只影响读;写永远只有 Secretary + MCP 一条路。必填,不设默认。
+platform:
+  mode: fixture
+  # ⚠ 必填:动作 → 本环境的 MCP 工具名。每个动作要什么能力、输入输出哪些字段、
+  # 落到 WorldReport / ActionResult 的哪一格,逐条见 .loop/PLATFORM.md。
+  # 前四个是读绑定(没有它们 Scout 跑不了 P1,影子运行也不成立),恒为必填;
+  # 后五个是写绑定,影子运行(LOOP_SHADOW=1)下不校验——它一个字节都不写。
+  # 建分支不在表里:它是 Implementer 的 git push,不是 MCP 动作。
+  mcp:
+    # 显式连接；不从 user/project/local settings 继承。token 不写在这里，
+    # HTTP/SSE header 只填环境变量名。stdio command 必须是绝对路径。
+    servers:
+      gongfeng:
+        transport: http
+        url_env: LOOP_MCP_GONGFENG_URL
+        headers_env:
+          Authorization: LOOP_MCP_GONGFENG_AUTH
+      tapd:
+        transport: http
+        url_env: LOOP_MCP_TAPD_URL
+        headers_env:
+          Authorization: LOOP_MCP_TAPD_AUTH
+    tools:
+      read_ticket: {server: "", tool: ""}
+      read_mr: {server: "", tool: ""}
+      read_ci: {server: "", tool: ""}
+      read_comments: {server: "", tool: ""}
+      add_label: {server: "", tool: ""}
+      remove_label: {server: "", tool: ""}
+      comment: {server: "", tool: ""}
+      open_mr: {server: "", tool: ""}
+      open_ticket: {server: "", tool: ""}
+
+# ⚠ 必改:钉住发出 .loop/ 这套护栏的 loopctl 版本(`loopctl version` 的输出)。
+# 不符即 exit 3:二进制与仓内护栏不是同一版发的,后面每一条 hash 核对都会跟着错。
+loopctl_version: v2
+
+# ⚠ 必改:本仓的默认分支(master / main / …)。
+default_branch: master
+
+# ⚠ 按本仓校准:生成物与 vendor 目录。影子运行会报出本仓是不是 vendor 模式。
+exclude:
+  - "**/*.pb.go"
+  - "**/zz_generated*"
+  - "vendor/**"
+  - "**/testdata/**"
+  # 仓内自带的第三方副本:不是我们的代码,不承担质量责任。testify 更是
+  # agent 自己写的测试要 import 的断言库——给它补测试是用 A 测 A。
+  - "internal/testify/**"
+  - "internal/spew/**"
+  # 测试脚手架(fixture / example / playground):本来就是测试用的,
+  # 且 test/examples 在干净检出上就构建失败(上游既存)。
+  - "test/**"
+
+# 文档债:true 时"补注释"作为一次 L3 变更走完整人审(MR 描述须声明
+# 注释由实现推导、请确认其描述意图而非现状);false 只开票交人。
+# 无论取值,禁止在 L2 管线内自动补注释(注释由实现推导 = 实现经散文自证)。
+# 目前只实现了 false 的那一半:置 true → `loopctl config validate` 报错并 exit 1
+# (P0 因此在唤起任何 agent 之前就停住),不做运行时降级。
+docs_autofix: false
+
+mutation_tool: gremlins # 包装层可换 go-mutesting
+# ⚠ 必改:钉住本机已安装工具的自报版本。采样身份是
+# file:line:col:type + 同位序号,mutator 命名或 column 口径一变就整体错位,
+# "同种子复跑得同集合"会静默失效——只有版本钉拦得住。
+# 换工具或升级工具时人工改这里,不符即 exit 3(环境错误,不是质量失败)。
+mutation_tool_version: v0.6.0
+labels_prefix: loop-
+trusted_responders: [] # 叠加于平台角色校验之上

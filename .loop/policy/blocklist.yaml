@@ -1,0 +1,112 @@
+# .loop/policy/blocklist.yaml — 禁改路径清单。
+#
+# 执法者是 .claude/settings.json 的 PreToolUse hooks,
+# 不是 prompt——权限靠机制。本文件只是清单,读它的是 hook。
+#
+# 匹配口径:与 config.exclude 同一 glob 方言(loopctl internal/xglob)。
+#   `*`/`?` 只在一个路径段内匹配;独立的 `**` 段匹配零或多段;
+#   结尾的 `**` 匹配该目录下的内容(不匹配目录名本身)。
+#   路径为仓库根相对、斜杠分隔。
+#
+# stages 语义:
+#   l3   — 仅 stage=l3 拒(拒本文件中全部路径)。
+#   any  — 任意 stage 拒。I10 清单取 any:没有任何 LLM 阶段(含 orchestrate)需要写护栏,
+#          人类改护栏不在 LOOP_STAGE 下发生。收紧方向,不放宽任何一条。
+#
+# 本文件自身在清单内(I10):增删任何一条都是人审动作。source: I10 的条目永久保留,
+# 不得删除、不得放宽——它们是不变量的实体化。
+#
+# 执法:`loopctl config validate` 拿内嵌的 I10 强制清单对本文件做**子集核对**
+# ——少一条、或 stages 不含 any → exit 3。其余条目是本仓自己的,按实际布局校准,
+# 方向只有一个:只加不减。
+
+version: 1
+
+deny:
+  # ---- I10 自改禁止清单(永久在 L3 blocklist 中,变更一律人审) ----
+  - pattern: ".loop/policy/**"
+    stages: [any]
+    source: I10
+    why: "护栏策略本身:blocklist / test-deps / rubric"
+
+  - pattern: ".loop/config.yaml"
+    stages: [any]
+    source: I10
+    why: "全部旋钮;人类可改,agent 只读"
+
+  - pattern: "tools/loopctl/**"
+    stages: [any]
+    source: I10
+    why: "可信基座:状态迁移、消毒、门禁的唯一实现"
+
+  - pattern: ".claude/**"
+    stages: [any]
+    source: I10
+    why: "native runner 编排层与 hooks 配置——写执法层自身"
+
+  - pattern: ".github/**"
+    stages: [any]
+    source: I10
+    why: "CI 配置(任意 stage 都拒)"
+  - pattern: ".gitlab-ci.yml"
+    stages: [any]
+    source: I10
+    why: "CI 配置"
+  - pattern: ".ci.yml"
+    stages: [any]
+    source: I10
+    why: "CI 配置"
+  - pattern: ".ci/**"
+    stages: [any]
+    source: I10
+    why: "CI 配置"
+  - pattern: "Jenkinsfile"
+    stages: [any]
+    source: I10
+    why: "CI 配置"
+  # TODO:目标仓库(工蜂)的 CI 配置确切路径未定,上面是通用集合。
+  # 接真实仓库时按实际布局校准——多拦无害(方向朝红),漏拦即 I10 破口。
+
+  - pattern: ".git/**"
+    stages: [any]
+    source: I10
+    why: "写策略点名 .git/config;此处收紧到整个 .git/——没有任何 LLM 阶段需要写它"
+
+  # ---- 其余护栏(初版;增删走人审,但不在 I10 的"永久"约束内) ----
+  - pattern: ".loop/ratchet.yaml"
+    stages: [any]
+    why: "coverage floor 只升不降,唯一合法写者是 loopctl ratchet raise;直接编辑即绕过执法"
+
+  - pattern: ".loop/prompts/**"
+    stages: [any]
+    why: "岗位说明书:改它等于改角色权限边界"
+
+  - pattern: ".loop/prompts.local/**"
+    stages: [any]
+    why: "本仓 prompt 追加片段:它拼在岗位说明书后面,能写它就能给自己加权限"
+
+  - pattern: ".loop/schemas/**"
+    stages: [any]
+    why: "结构化契约:改它等于改 agent 之间的接口"
+
+  # .loop/lessons/** 不在清单内:Librarian 的合法产出路径,且落盘走 loopctl lessons add。
+  # .loop/runtime/** 不在清单内:可丢弃缓存,loopctl 单写 state。
+
+  # ---- 高风险目录(初版含 auth/支付/migration 目录) ----
+  - pattern: "**/auth/**"
+    stages: [l3]
+    why: "认证:改错的代价不由测试兜底"
+  - pattern: "**/payment/**"
+    stages: [l3]
+    why: "支付"
+  - pattern: "**/billing/**"
+    stages: [l3]
+    why: "计费"
+  - pattern: "**/migration/**"
+    stages: [l3]
+    why: "数据迁移:不可逆"
+  - pattern: "**/migrations/**"
+    stages: [l3]
+    why: "数据迁移:不可逆"
+  # TODO:以上按通用目录名书写;接入目标仓库后按其实际布局校准
+  # (v1 目标仓库未定,宁可多拦)。

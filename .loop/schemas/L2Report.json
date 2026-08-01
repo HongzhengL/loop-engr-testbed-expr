@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:loop-engr:schema:L2Report",
+  "title": "L2Report",
+  "description": "L2 内环一轮的汇总视图,由 native runner 从 loopctl 的 reports/*.json 拼装——它不是 loopctl 任何单条命令的输出格式。整份内容会流向 UT-Writer 与 Arbiter,故通篇不得出现源码行号、行级覆盖与实现代码。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tests_pass", "flaky", "lint_issues", "diff_line_cov", "mutation"],
+  "properties": {
+    "tests_pass": {
+      "type": "boolean",
+      "description": "本轮测试全绿(无失败、无构建失败)。"
+    },
+    "flaky": {
+      "type": "array",
+      "description": "多次运行结果不一致的测试,格式 \"<package>.<TestName>\"(test run 报告口径)。",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "lint_issues": {
+      "type": "array",
+      "description": "loopctl lint tests 的问题条目;不含行号。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "rule", "detail"],
+        "properties": {
+          "file": { "type": "string", "minLength": 1, "description": "worktree 相对、斜杠分隔。" },
+          "test": { "type": "string", "description": "问题所属的 Test 函数名(规则与函数无关时缺省)。" },
+          "rule": {
+            "type": "string",
+            "enum": ["external-package", "no-assertion", "sleep", "net-import"],
+            "description": "lint tests 的规则集。"
+          },
+          "detail": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "diff_line_cov": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "改动行的语句覆盖率。null = 未测得,gate 按证据缺失处理,不得当作 0 也不得当作达标。阈值 config.quality.diff_line_cov。"
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "survivors"],
+      "properties": {
+        "score": {
+          "type": ["number", "null"],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "null = 无可变异物(viable_total==0 时不得记 1.0);阈值 config.quality.mutation_post_l3 / mutation_direct_l2。"
+        },
+        "survivors": {
+          "type": "array",
+          "description": "幸存 mutant。只带 id、判定与行为级描述——不含行号、文件、函数体。",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "verdict", "behavioral_note"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1, "description": "mutate 报告里的 mutant 标识。" },
+              "verdict": {
+                "type": "string",
+                "enum": ["gap", "equivalent"],
+                "description": "gap = 测试缺口;equivalent = 等价变异。equivalent 的允许量在 gate 封顶:max(1, floor(config.quality.equivalent_cap × 幸存数))。"
+              },
+              "behavioral_note": {
+                "type": "string",
+                "minLength": 1,
+                "description": "由 Arbiter 翻译的行为级描述:说\"哪个可观察行为没有被测到\",不含代码。"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

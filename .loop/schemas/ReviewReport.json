@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:loop-engr:schema:ReviewReport",
+  "title": "ReviewReport",
+  "description": "UT-Reviewer 的复核结论。整份内容会回流给下一个 UT-Writer,因此通篇必须行为级:无源码行号、无行级覆盖、无实现代码。复核者只读剥体树与测试文件,构造上够不到实现——唯一的泄漏面是它自己推测出来的实现细节。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "issues", "missing_behaviors"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["pass", "revise"],
+      "description": "pass = 无需再补;revise = 有缺口,交下一个 writer。这不是门禁裁决——门禁由 loopctl gate 判,路由由 Arbiter 判。"
+    },
+    "issues": {
+      "type": "array",
+      "description": "具体缺口,一条一个。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "detail"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "description": "问题类型,稳定短词(如 no-assertion / tautology / missing-boundary / missing-error-path / overfit / nondeterministic / external-package / dependency)。不设枚举(类型还在长),但同类问题必须复用同一个词——跨轮聚合统计靠它。"
+          },
+          "test_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "问题所在的 Test 函数名;与具体测试无关(如整条行为没被测)时缺省。"
+          },
+          "behavior_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2,}$",
+            "description": "关联的 behaviors.yaml 行为 id(见 behaviors.schema.json)。"
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "description": "行为级说明:给定 X 应当观察到 Y,当前没有测试断言它。不含实现细节、不含行号。"
+          }
+        }
+      }
+    },
+    "missing_behaviors": {
+      "type": "array",
+      "description": "完全没有测试对应的行为,装 behaviors.yaml 的 id。",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*-[0-9]{2,}$"
+      }
+    }
+  }
+}

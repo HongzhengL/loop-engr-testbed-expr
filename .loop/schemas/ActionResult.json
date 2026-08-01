@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:loop-engr:schema:ActionResult",
+  "title": "ActionResult",
+  "description": "Secretary 一次平台写操作的结果。平台写收敛于 Secretary,且逐条过 config 配额;loopctl 永远不具备平台写能力。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["op", "target", "ok"],
+  "properties": {
+    "op": {
+      "type": "string",
+      "minLength": 1,
+      "description": "平台写操作名(开 MR / 评论 / 打 label / 摘 label / 开票 …)。label 一律带 config.labels_prefix 前缀。"
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1,
+      "description": "被写对象标识(ticket id / MR id / 分支名)。"
+    },
+    "ok": {
+      "type": "boolean",
+      "description": "写成功。配额自查未过、幂等查重命中\"已存在\"而未写,一律 ok=false——未写就是未写。"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "description": "写操作产生的平台 URL(如新建 MR / 评论的链接)。"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ok=false 时的原因,且是原因的唯一落点:配额哪一条不过 / 幂等查重命中了什么 / 平台报了什么错。禁止塞进 target 或 url——那两个字段是标识,不是叙述。ok=true 时不填。"
+    }
+  }
+}

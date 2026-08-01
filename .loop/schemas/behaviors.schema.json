@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:loop-engr:schema:behaviors",
+  "title": "behaviors",
+  "description": "Spec-Extractor 产出的 behaviors.yaml 的契约。它是 YAML 工件而非 agent 之间传递的消息,故文件名带 .schema 以示区分;校验对象是 YAML 解析后的结构。内容直接喂给 UT-Writer,因此必须行为级——源是剥体树,只要不推测实现就不可能泄漏。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["behaviors"],
+  "properties": {
+    "behaviors": {
+      "type": "array",
+      "description": "可从包外观察的行为,一条一断言。direct_l2 取前 K 条,K = config.quality.k_behaviors。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["symbol", "name", "given", "when", "then", "source"],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?$",
+            "description": "这条行为所属的**导出符号**:`Clamp`、`Buffer.Write`(方法写成 `类型.方法`)。它与 `name` 一起是 `id` 的全部原料,所以必须是符号原文,不是描述。未导出符号不该出现在这里——黑盒够不着它。"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$",
+            "description": "**由 `loopctl behaviors normalize` 派生,不由 Spec-Extractor 填**。派生自 `symbol` + `name`:各自 slug 化(小写、非字母数字转 `-`、折叠、去首尾、截断)后以 `-` 相连;两条不同的 `(symbol, name)` 截断后撞在一起时,冲突各方都追加一段内容短哈希并标 `collision: true`。它是跨 tick 行为追踪的主键,所以稳定性是硬要求:改措辞该变,调顺序不该变。本字段在 normalize 之前不存在,故非必填。"
+          },
+          "collision": {
+            "type": "boolean",
+            "description": "本条 id 与另一条撞了,因而带了消歧的短哈希(通常是截断所致)。给人看的告警:两条行为的符号与名字近到只差在第 48 个字符之后,多半是抽取粒度出了问题。由 normalize 写入,无冲突时不写。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 _-]*$",
+            "description": "一句话概括,可直接当测试用例名,因此限定为 ASCII 短语(字母 / 数字 / 空格 / `_` / `-`)。这不是风格洁癖:`id` 由 symbol + 本字段机械 slug 而来,而「把中文概括翻成英文短语」是一步**由模型决定**的变换——同一条 name 两次翻译不一定同结果,id 就又漂了,这正是序号与 slug 化都不交给模型的原因。中文说明写进 `given`/`when`/`then`。"
+          },
+          "given": {
+            "type": "string",
+            "minLength": 1,
+            "description": "前提:输入取值或状态(含零值 / 空集合 / 边界)。"
+          },
+          "when": {
+            "type": "string",
+            "minLength": 1,
+            "description": "触发:调用哪个导出符号、怎么调。只用导出面表述。"
+          },
+          "then": {
+            "type": "string",
+            "minLength": 1,
+            "description": "期望的可观察结果:返回值 / 错误 / 副作用。未指定的行为写\"未指定\",不写\"应当\"——臆造出来的承诺会变成 writer 断言不出来的测试。"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["doc", "ticket", "signature"],
+            "description": "这条行为的硬度来源:doc = doc comment 的承诺;ticket = ticket 正文/回答;signature = 由签名与类型推出。下游据此判断能多信它。"
+          }
+        }
+      }
+    }
+  }
+}

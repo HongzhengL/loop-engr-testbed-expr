@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:loop-engr:schema:TickResult",
+  "title": "TickResult",
+  "description": "一个 tick 的结局,由 native runner 返回给触发它的外层 `/loop` agent;状态迁移在 LLM 之外由 `loopctl tick close` 完成。编排层只传工件路径与结构化状态码,不传文件内容。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["action"],
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "stop",
+        "abort",
+        "retry",
+        "escalate",
+        "red_main",
+        "pipeline.fix_mr",
+        "pipeline.address_review",
+        "secretary.answer",
+        "pipeline.implement",
+        "secretary.grill",
+        "pipeline.direct_l2",
+        "early_exit",
+        "budget_exhausted",
+        "p0_failed"
+      ],
+      "description": "本 tick 的动作。前十三个就是 `loopctl decide` 的动作词表——它**就是** decide 裁出的那一个,native runner 原样回传:管线跑成什么样是 `verdict` 的事,`action` 只回答「这个 tick 在做哪件事」。**末两个是例外,且仅此两个**:`budget_exhausted`(P0 第 ④ 步 exit 4)与 `p0_failed`(P0 其余任何一步非 0)。它们**不是 decide 的输出**——P0 失败时 decide 根本没跑过,而「没跑过」必须能被表达,否则那一跑要么回一个假的 decide 动作(说的是没发生的事),要么什么都不回(外层 agent 分不清「今天到此为止」和「workflow 崩了」)。区分这两者正是外层 agent 唯一要做的判断:前者停到明天,后者是环境坏了、该喊人。两份闭集分开写(decide.action 十三个、本字段十五个),是因为合成一份就等于允许 decide 有朝一日裁出 `p0_failed`——而那句话没有意义。收紧为 enum 的理由与 phase 词表同:自由 token 的字段永远校验不出拼错,而拼错的动作会被下游读成一个它不认识、于是默默不处理的分支。"
+    },
+    "task": {
+      "type": "string",
+      "minLength": 1,
+      "description": "本 tick 处理的 ticket id(early exit 等无任务的动作缺省)。"
+    },
+    "verdict": {
+      "type": "string",
+      "minLength": 1,
+      "description": "结局(如 done / gate 未过 / escalated)。"
+    },
+    "next_hint": {
+      "type": "string",
+      "minLength": 1,
+      "description": "给下一个 tick 的提示;仅是提示——跨 tick 的权威状态在平台与 runtime state。"
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["date", "exceeded"],
+      "description": "本 tick 起跑时那份 BudgetReport 的投影。它是**给外层 agent 看的**:`/loop` 的 agent 读不到 loopctl 的 stdout(它只看得见 tick 的返回值),而它要据此决定是继续按间隔跑还是停到次日 UTC+8 00:00。`action` 为 `budget_exhausted` 时必带。",
+      "properties": {
+        "date": { "type": "string", "minLength": 1, "description": "UTC+8 日期(YYYY-MM-DD)。停到「明天」指的是这个日历的明天。" },
+        "exceeded": {
+          "type": "array",
+          "description": "已触顶的模型;空数组 = 都没触顶(tick 照常跑完)。",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["model", "tokens", "limit"],
+            "properties": {
+              "model": { "type": "string", "minLength": 1 },
+              "tokens": { "type": "integer", "minimum": 0 },
+              "limit": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "remaining": {
+          "type": "array",
+          "description": "各模型的当日余量,供外层 agent 判断「还够不够再跑一轮」。仅是信息:能不能跑由下一次 `tick prepare` 的第 ④ 步说了算。",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["model", "remaining"],
+            "properties": {
+              "model": { "type": "string", "minLength": 1 },
+              "remaining": { "type": "integer", "description": "limit - budgeted;触顶后可为负。" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:loop-engr:schema:TestabilityDebt",
+  "title": "TestabilityDebt",
+  "description": "UT-Writer 的第二份产出:黑盒够不着的逻辑。它是**信号不是缺陷**——仅存在于未导出符号里的逻辑,外部测试包在构造上就到不了,这不是测试没写好。消费者是 Secretary 的 refactor 开票链路(打 <labels_prefix>agent-filed,受 quota.agent_tickets_per_day)。一份报告 = 一个包 = 一张票:package 是单值不是列表,这条粒度由字段形状定死。本契约不进 gate,不影响本轮成败。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["package", "blockers", "suggested_refactor"],
+  "properties": {
+    "package": {
+      "type": "string",
+      "minLength": 1,
+      "description": "够不着的那个包的 import path。一个包一份报告——票是按包开的,合并多个包会让人类拿到一张无从下手的票。"
+    },
+    "blockers": {
+      "type": "array",
+      "minItems": 1,
+      "description": "具体卡在哪几处。空数组不是「没有障碍」而是「没写清楚」:真的没有障碍就不该产出这份报告。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "detail"],
+        "properties": {
+          "kind": {
+            "enum": [
+              "hardcoded_clock",
+              "global_singleton",
+              "no_injection_point",
+              "unexported_only",
+              "other"
+            ],
+            "description": "障碍类型,闭集。它是闭集才聚合得起来——长期要能回答\"这个仓库最常见的可测性障碍是哪一种\",而自由文本的类型名永远聚不成堆。hardcoded_clock:直接读挂钟,行为不可复现;global_singleton:全局可变状态,测试之间互相污染;no_injection_point:依赖在函数体里 new 出来,外部换不掉;unexported_only:逻辑只存在于未导出符号中;other:以上都不是,detail 必须说清。"
+          },
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?$",
+            "description": "障碍所在的符号(`Clamp`、`Buffer.Write`),看得见就填。非必填:\"整个包没有注入点\"这类障碍没有对应符号,硬编一个只会把注意力引到错的地方。"
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1,
+            "description": "从**包外**看,哪个可观察行为因此测不到。不写实现细节、不写行号:这份报告会被人类贴进 ticket,而 ticket 会被 Scout 读回来。"
+          }
+        }
+      }
+    },
+    "suggested_refactor": {
+      "type": "string",
+      "minLength": 1,
+      "description": "需要什么样的导出面/注入点才能从包外测到。是建议不是要求——不得据此要求 Implementer 导出内部符号,决定权在人类。"
+    }
+  }
+}

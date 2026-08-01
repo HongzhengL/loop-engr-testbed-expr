@@ -1,0 +1,32 @@
+# .loop/policy/test-deps.yaml — 允许在测试里引入的依赖白名单。
+#
+# 为什么初版是空的:新增任何非标准库依赖都要动 go.mod / go.sum,而
+#   - stage=l2 的 hook 只放行**本表列出的** module(见下「执法点」);
+#   - L3 动了依赖,gate 记 deps-changed 需人审。
+# 所以"引入一个新测试依赖"在设计上就是一次人审动作,本表的新增条目同样是人审动作。
+# 表为空 = 只允许标准库,UT-Writer 用 testing + 手写断言即可满足 lint tests 的规则。
+#
+# 匹配口径:import path 前缀匹配,按路径段边界(prefix "github.com/google/go-cmp"
+# 命中 "github.com/google/go-cmp/cmp",不命中 "github.com/google/go-cmpx")。
+
+version: 1
+
+# 标准库始终允许(判据:import path 第一段不含 ".")。
+stdlib_allowed: true
+
+# 允许的第三方测试依赖;每条须写明理由,以便复核。
+modules: []
+# 示例(未启用):
+# - path: github.com/google/go-cmp/cmp
+#   why: 结构体差异断言;不引入运行期依赖
+#   test_only: true
+
+# 禁止项(即使将来出现在 modules 里也不放行):
+forbidden:
+  - path: "net"
+    why: "拨号入口;网络隔离的执法主体是沙箱,loopctl lint tests 兜底拦这一条。net/ 子树(url/http/httptest/netip)不在此列"
+
+# 执法点:`loopctl hook check`。stage=l2 写 go.mod / go.sum 时,它从这次写的
+# 内容里取出被提到的 module path,逐个对本表判——`modules` 命中即放行,命中 `forbidden`
+# 或谁都不命中即拒绝并提示走人审。**取不出任何 module path 也拒绝**(整份改写、只删不加、
+# `go mod tidy`):白名单只能对"看得见的依赖"成立,看不见不是放行的理由。

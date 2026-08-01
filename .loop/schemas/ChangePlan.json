@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:loop-engr:schema:ChangePlan",
+  "title": "ChangePlan",
+  "description": "Planner 的产物,由 native runner 落到 .loop/runtime/tasks/<ticket-id>/plan.yaml。Planner 只读仓库,不建 worktree、不写代码、不调平台。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ticket", "files", "est_loc", "behaviors", "risks"],
+  "properties": {
+    "ticket": { "type": "string", "minLength": 1 },
+    "files": {
+      "type": "array",
+      "description": "计划改动的文件(仓库根相对、斜杠分隔)。est_files 即本数组长度。不得列入 .loop/policy/blocklist.yaml 命中的路径——那些路径的变更一律人审。",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "est_loc": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "预估有效变更行数,口径与 loopctl diffstat 一致:added+deleted,排除 *_test.go、testdata/、config.exclude。软限阈值从 config.limits 读。"
+    },
+    "behaviors": {
+      "type": "array",
+      "description": "本次改动应产生的可观察行为,行为级、可由外部测试包验证;不得引用未导出符号。",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "risks": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "split_suggestion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "仅当超软限时给出:交给 Secretary 发到 ticket 的拆分建议正文。给出即意味着本任务在本 tick 结束。"
+    }
+  }
+}
