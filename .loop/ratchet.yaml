@@ -1,4 +1,30 @@
 # Per-package statement-coverage floors: CI 读取执法,只升不降。
 # 由 `loopctl ratchet raise` 维护;floors 键为包 import path,值为 [0,1] 覆盖率。
 version: 1
-floors: {}
+floors:
+    github.com/expr-lang/expr: 0.84
+    github.com/expr-lang/expr/ast: 0.61
+    github.com/expr-lang/expr/builtin: 0.75
+    github.com/expr-lang/expr/checker: 0.71
+    github.com/expr-lang/expr/checker/nature: 0
+    github.com/expr-lang/expr/compiler: 0.44
+    github.com/expr-lang/expr/conf: 0
+    github.com/expr-lang/expr/debug: 0
+    github.com/expr-lang/expr/docgen: 0.91
+    github.com/expr-lang/expr/file: 0.24
+    github.com/expr-lang/expr/internal/deref: 0.76
+    github.com/expr-lang/expr/internal/difflib: 0.92
+    github.com/expr-lang/expr/internal/ring: 1
+    github.com/expr-lang/expr/optimizer: 0.8
+    github.com/expr-lang/expr/parser: 0.9
+    github.com/expr-lang/expr/parser/lexer: 0.81
+    github.com/expr-lang/expr/parser/operator: 0
+    github.com/expr-lang/expr/parser/utils: 0
+    github.com/expr-lang/expr/patcher: 0.16
+    github.com/expr-lang/expr/patcher/value: 0.44
+    github.com/expr-lang/expr/repl: 0
+    github.com/expr-lang/expr/types: 0.52
+    github.com/expr-lang/expr/vm: 0.62
+    github.com/expr-lang/expr/vm/func_types: 0
+    github.com/expr-lang/expr/vm/runtime: 0.03
+    github.com/expr-lang/expr/vm/runtime/helpers: 0
