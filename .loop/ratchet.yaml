@@ -1,5 +1,3 @@
-# Per-package statement-coverage floors: CI 读取执法,只升不降。
-# 由 `loopctl ratchet raise` 维护;floors 键为包 import path,值为 [0,1] 覆盖率。
 version: 1
 floors:
     github.com/expr-lang/expr: 0.84
@@ -26,5 +24,5 @@ floors:
     github.com/expr-lang/expr/types: 0.52
     github.com/expr-lang/expr/vm: 0.62
     github.com/expr-lang/expr/vm/func_types: 0
-    github.com/expr-lang/expr/vm/runtime: 0.03
+    github.com/expr-lang/expr/vm/runtime: 0.06
     github.com/expr-lang/expr/vm/runtime/helpers: 0
