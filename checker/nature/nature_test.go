@@ -3,12 +3,17 @@ package nature_test
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/expr-lang/expr/checker/nature"
 )
 
 // anyType is the reflect.Type for the empty interface (interface{} / any).
 var anyType = reflect.TypeOf((*any)(nil)).Elem()
+
+// MyBytes is a named type whose underlying type is []byte, distinct from the
+// exact []byte type, used to test that IsByteSlice() is identity-based.
+type MyBytes []byte
 
 //loop:behavior cache-fromtype-fromtype-nil-reflect-type-returns-unknown-zero-v
 func TestCache_FromType_NilTypeReturnsUnknownNature(t *testing.T) {
@@ -297,5 +302,248 @@ func TestNature_Elem_SliceOrArrayKindWithRefOverridesDeclaredElementType(t *test
 				t.Errorf("Elem().Type = %v, should not be the declared element type (string)", got.Type)
 			}
 		})
+	}
+}
+
+//loop:behavior nature-isbool-isbool-true-for-bool-kind
+func TestNature_IsBool_TrueForBoolKind(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(true))
+
+	if got := n.IsBool(); !got {
+		t.Errorf("FromType(bool).IsBool() = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-isstring-isstring-true-for-string-kind
+func TestNature_IsString_TrueForStringKind(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(""))
+
+	if got := n.IsString(); !got {
+		t.Errorf("FromType(string).IsString() = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-isarray-isarray-true-for-slice-or-array-kind
+func TestNature_IsArray_TrueForSliceOrArrayKind(t *testing.T) {
+	var c *nature.Cache
+	cases := map[string]reflect.Type{
+		"slice": reflect.TypeOf([]string{}),
+		"array": reflect.TypeOf([2]string{}),
+	}
+	for name, tp := range cases {
+		t.Run(name, func(t *testing.T) {
+			n := c.FromType(tp)
+			if got := n.IsArray(); !got {
+				t.Errorf("FromType(%v).IsArray() = %v, want true", tp, got)
+			}
+		})
+	}
+}
+
+//loop:behavior nature-isarray-isarray-false-for-non-array-non-slice-kind
+func TestNature_IsArray_FalseForNonArrayNonSliceKind(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(0))
+
+	if got := n.IsArray(); got {
+		t.Errorf("FromType(int).IsArray() = %v, want false", got)
+	}
+}
+
+//loop:behavior nature-ismap-ismap-true-for-map-kind
+func TestNature_IsMap_TrueForMapKind(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(map[string]int{}))
+
+	if got := n.IsMap(); !got {
+		t.Errorf("FromType(map[string]int).IsMap() = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-isstruct-isstruct-true-for-struct-kind
+func TestNature_IsStruct_TrueForStructKind(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(struct{}{}))
+
+	if got := n.IsStruct(); !got {
+		t.Errorf("FromType(struct{}{}).IsStruct() = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-isfunc-isfunc-true-for-func-kind
+func TestNature_IsFunc_TrueForFuncKind(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(func() {}))
+
+	if got := n.IsFunc(); !got {
+		t.Errorf("FromType(func()).IsFunc() = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-ispointer-ispointer-true-for-pointer-kind
+func TestNature_IsPointer_TrueForPointerKind(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(new(int)))
+
+	if got := n.IsPointer(); !got {
+		t.Errorf("FromType(*int).IsPointer() = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-isbyteslice-isbyteslice-true-only-for-the-exact-byte-type
+func TestNature_IsByteSlice_TrueForExactByteSliceType(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf([]byte{}))
+
+	if got := n.IsByteSlice(); !got {
+		t.Errorf("FromType([]byte{}).IsByteSlice() = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-isbyteslice-isbyteslice-false-for-a-distinct-named-byte-slic
+func TestNature_IsByteSlice_FalseForDistinctNamedByteSliceType(t *testing.T) {
+	var c *nature.Cache
+	cases := map[string]reflect.Type{
+		"named byte slice type (MyBytes)": reflect.TypeOf(MyBytes{}),
+		"unrelated slice type ([]string)": reflect.TypeOf([]string{}),
+	}
+	for name, tp := range cases {
+		t.Run(name, func(t *testing.T) {
+			n := c.FromType(tp)
+			if got := n.IsByteSlice(); got {
+				t.Errorf("FromType(%v).IsByteSlice() = %v, want false", tp, got)
+			}
+		})
+	}
+}
+
+//loop:behavior nature-istime-istime-true-only-for-the-exact-time-time-type
+func TestNature_IsTime_TrueOnlyForExactTimeType(t *testing.T) {
+	var c *nature.Cache
+
+	timeNature := c.FromType(reflect.TypeOf(time.Time{}))
+	if got := timeNature.IsTime(); !got {
+		t.Errorf("FromType(time.Time{}).IsTime() = %v, want true", got)
+	}
+
+	intNature := c.FromType(reflect.TypeOf(0))
+	if got := intNature.IsTime(); got {
+		t.Errorf("FromType(int).IsTime() = %v, want false", got)
+	}
+}
+
+//loop:behavior nature-isduration-isduration-true-only-for-the-exact-time-duration
+func TestNature_IsDuration_TrueOnlyForExactDurationType(t *testing.T) {
+	var c *nature.Cache
+
+	durationNature := c.FromType(reflect.TypeOf(time.Duration(0)))
+	if got := durationNature.IsDuration(); !got {
+		t.Errorf("FromType(time.Duration(0)).IsDuration() = %v, want true", got)
+	}
+
+	int64Nature := c.FromType(reflect.TypeOf(int64(0)))
+	if got := int64Nature.IsDuration(); got {
+		t.Errorf("FromType(int64).IsDuration() = %v, want false", got)
+	}
+}
+
+//loop:behavior nature-isnumber-isnumber-true-when-isinteger-is-set
+func TestNature_IsNumber_TrueWhenIsIntegerIsSet(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(int(0)))
+
+	if !n.IsInteger || n.IsFloat {
+		t.Fatalf("precondition failed: FromType(int) IsInteger=%v IsFloat=%v, want IsInteger=true IsFloat=false", n.IsInteger, n.IsFloat)
+	}
+	if got := n.IsNumber(); !got {
+		t.Errorf("IsNumber() with IsInteger=true = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-isnumber-isnumber-true-when-isfloat-is-set
+func TestNature_IsNumber_TrueWhenIsFloatIsSet(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(float64(0)))
+
+	if !n.IsFloat || n.IsInteger {
+		t.Fatalf("precondition failed: FromType(float64) IsFloat=%v IsInteger=%v, want IsFloat=true IsInteger=false", n.IsFloat, n.IsInteger)
+	}
+	if got := n.IsNumber(); !got {
+		t.Errorf("IsNumber() with IsFloat=true = %v, want true", got)
+	}
+}
+
+//loop:behavior nature-isnumber-isnumber-false-when-neither-isinteger-nor-isfloa
+func TestNature_IsNumber_FalseWhenNeitherIsIntegerNorIsFloatIsSet(t *testing.T) {
+	var c *nature.Cache
+	n := c.FromType(reflect.TypeOf(""))
+
+	if n.IsInteger || n.IsFloat {
+		t.Fatalf("precondition failed: FromType(string) IsInteger=%v IsFloat=%v, want both false", n.IsInteger, n.IsFloat)
+	}
+	if got := n.IsNumber(); got {
+		t.Errorf("IsNumber() with IsInteger=false IsFloat=false = %v, want false", got)
+	}
+}
+
+//loop:behavior nature-string-string-returns-the-underlying-reflect-type-strin
+func TestNature_String_ReturnsUnderlyingReflectTypeStringWhenTypeIsSet(t *testing.T) {
+	var c *nature.Cache
+	tp := reflect.TypeOf(0)
+	n := c.FromType(tp)
+
+	got := n.String()
+	want := tp.String()
+	if got != want {
+		t.Errorf("Nature.String() = %q, want %q", got, want)
+	}
+}
+
+//loop:behavior nature-string-string-returns-the-literal-unknown-when-type-is
+func TestNature_String_ReturnsUnknownLiteralWhenTypeIsNil(t *testing.T) {
+	n := nature.Nature{}
+
+	got := n.String()
+	want := "unknown"
+	if got != want {
+		t.Errorf("Nature{}.String() = %q, want %q", got, want)
+	}
+}
+
+//loop:behavior natureof-package-natureof-nil-input-returns-nil-nature
+func TestNatureOf_PackageLevel_NilInputReturnsNilNature(t *testing.T) {
+	got := nature.NatureOf(nil)
+
+	if !got.Nil {
+		t.Errorf("nature.NatureOf(nil).Nil = %v, want true", got.Nil)
+	}
+	if got.Type != nil {
+		t.Errorf("nature.NatureOf(nil).Type = %v, want nil", got.Type)
+	}
+}
+
+//loop:behavior natureof-package-natureof-non-nil-input-matches-fromtype
+func TestNatureOf_PackageLevel_NonNilInputMatchesFromTypeOfValueType(t *testing.T) {
+	i := 3
+
+	got := nature.NatureOf(i)
+	want := nature.FromType(reflect.TypeOf(i))
+
+	if got != want {
+		t.Errorf("nature.NatureOf(%v) = %+v, want %+v (nature.FromType(reflect.TypeOf(%v)))", i, got, want, i)
+	}
+}
+
+//loop:behavior fromtype-package-fromtype-nil-reflect-type-returns-unknow
+func TestFromType_PackageLevel_NilReflectTypeReturnsUnknownZeroValueNature(t *testing.T) {
+	got := nature.FromType(nil)
+
+	if got.Type != nil {
+		t.Errorf("nature.FromType(nil).Type = %v, want nil", got.Type)
+	}
+	if got.TypeData != nil {
+		t.Errorf("nature.FromType(nil).TypeData = %v, want nil", got.TypeData)
 	}
 }
