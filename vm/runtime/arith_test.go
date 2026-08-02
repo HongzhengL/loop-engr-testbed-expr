@@ -16,7 +16,7 @@ import (
 
 // TestExponent_ReturnsMathPowOfBothOperandsConvertedToFloat64 covers:
 //
-//loop:behavior exponent-exponent-returns-math-pow-of-both-operands-conve
+//loop:behavior exponent-exponent-returns-math-pow-of-both-operands-as-fl
 func TestExponent_ReturnsMathPowOfBothOperandsConvertedToFloat64(t *testing.T) {
 	tests := []struct {
 		name string
@@ -41,7 +41,7 @@ func TestExponent_ReturnsMathPowOfBothOperandsConvertedToFloat64(t *testing.T) {
 
 // TestExponent_PanicsWhenEitherOperandIsNotSupportedNumericKind covers:
 //
-//loop:behavior exponent-exponent-panics-when-either-operand-is-not-a-sup
+//loop:behavior exponent-exponent-panics-when-either-operand-is-not-numer
 func TestExponent_PanicsWhenEitherOperandIsNotSupportedNumericKind(t *testing.T) {
 	tests := []struct {
 		name string
@@ -168,7 +168,7 @@ func TestAdd_ConcatenatesTwoStringOperands(t *testing.T) {
 
 // TestAdd_ReturnsLaterTimeWhenAddingDurationToTime covers:
 //
-//loop:behavior add-add-returns-a-later-time-time-when-adding-a-time
+//loop:behavior add-add-returns-a-later-time-value-when-adding-a-dur
 func TestAdd_ReturnsLaterTimeWhenAddingDurationToTime(t *testing.T) {
 	base := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.UTC)
 	d := 2 * time.Hour
@@ -179,7 +179,7 @@ func TestAdd_ReturnsLaterTimeWhenAddingDurationToTime(t *testing.T) {
 
 // TestAdd_IsDefinedForDurationPlusTimeInEitherOperandOrder covers:
 //
-//loop:behavior add-add-is-defined-for-time-duration-plus-time-time
+//loop:behavior add-add-is-defined-for-duration-plus-time-in-either
 func TestAdd_IsDefinedForDurationPlusTimeInEitherOperandOrder(t *testing.T) {
 	base := time.Date(2021, time.January, 1, 0, 0, 0, 0, time.UTC)
 	d := 90 * time.Minute
@@ -204,7 +204,7 @@ func TestAdd_SumsTwoTimeDurationOperands(t *testing.T) {
 
 // TestAdd_PanicsForOperandTypeCombinationsWithNoDefinedSum covers:
 //
-//loop:behavior add-add-panics-for-operand-type-combinations-with-no
+//loop:behavior add-add-panics-for-operand-combinations-with-no-defi
 func TestAdd_PanicsForOperandTypeCombinationsWithNoDefinedSum(t *testing.T) {
 	tests := []struct {
 		name string

@@ -14,7 +14,7 @@ import (
 
 // TestSlice_ReturnsSubSliceForInBoundsIndices covers:
 //
-//loop:behavior slice-slice-returns-sub-slice-for-in-bounds-indices
+//loop:behavior slice-slice-returns-a-sub-slice-for-in-bounds-indices
 func TestSlice_ReturnsSubSliceForInBoundsIndices(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -38,7 +38,7 @@ func TestSlice_ReturnsSubSliceForInBoundsIndices(t *testing.T) {
 
 // TestSlice_ReturnsSubstringForStringInput covers:
 //
-//loop:behavior slice-slice-returns-substring-for-a-string-input
+//loop:behavior slice-slice-returns-a-substring-for-a-string-input
 func TestSlice_ReturnsSubstringForStringInput(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -94,7 +94,7 @@ func TestSlice_TreatsNegativeToAsOffsetFromLength(t *testing.T) {
 
 // TestSlice_ClampsEndIndexToLengthWhenExceedsIt covers:
 //
-//loop:behavior slice-slice-clamps-the-end-index-to-the-slice-length-w
+//loop:behavior slice-slice-clamps-the-end-index-to-the-length-when-it
 func TestSlice_ClampsEndIndexToLengthWhenExceedsIt(t *testing.T) {
 	array := []int{0, 1, 2}
 	got := runtime.Slice(array, 0, 100)
@@ -132,12 +132,12 @@ func TestSlice_ClampsStartToComputedEndWhenStartExceedsEnd(t *testing.T) {
 // so a mutation in any single clamping step is expected to surface as a
 // mismatch on at least one combination in the matrix.
 //
-//loop:behavior slice-slice-returns-sub-slice-for-in-bounds-indices
-//loop:behavior slice-slice-returns-substring-for-a-string-input
+//loop:behavior slice-slice-returns-a-sub-slice-for-in-bounds-indices
+//loop:behavior slice-slice-returns-a-substring-for-a-string-input
 //loop:behavior slice-slice-treats-a-negative-from-as-an-offset-from-t
 //loop:behavior slice-slice-clamps-the-start-index-to-zero-when-still
 //loop:behavior slice-slice-treats-a-negative-to-as-an-offset-from-the
-//loop:behavior slice-slice-clamps-the-end-index-to-the-slice-length-w
+//loop:behavior slice-slice-clamps-the-end-index-to-the-length-when-it
 //loop:behavior slice-slice-clamps-start-to-the-computed-end-when-star
 func TestSlice_ResolvesEffectiveBoundsAcrossFromToCombinations(t *testing.T) {
 	const length = 6

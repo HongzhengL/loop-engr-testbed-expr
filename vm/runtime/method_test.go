@@ -25,7 +25,7 @@ func (*fetchMethodPtrOnly) Greet() string { return "hi" }
 
 // TestFetchMethod_ReturnsBoundMethodAtIndex covers:
 //
-//loop:behavior fetchmethod-fetchmethod-returns-the-bound-method-at-method-i
+//loop:behavior fetchmethod-fetchmethod-returns-the-bound-method-at-the-give
 func TestFetchMethod_ReturnsBoundMethodAtIndex(t *testing.T) {
 	from := fetchMethodValueReceiver{}
 	typ := reflect.TypeOf(from)
@@ -49,7 +49,7 @@ func (fetchMethodTwoMethods) Beta() int  { return 2 }
 
 // TestFetchMethod_SelectsMethodByIndexNotJustTheFirstOne covers:
 //
-//loop:behavior fetchmethod-fetchmethod-returns-the-bound-method-at-method-i
+//loop:behavior fetchmethod-fetchmethod-returns-the-bound-method-at-the-give
 func TestFetchMethod_SelectsMethodByIndexNotJustTheFirstOne(t *testing.T) {
 	from := fetchMethodTwoMethods{}
 	typ := reflect.TypeOf(from)
