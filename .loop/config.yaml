@@ -8,7 +8,7 @@ version: 2
 # ⚠ 必改:换成本环境(内网)可用的模型名。档位含义:
 # cheap = 只读侦察 / 转发 / 沟通;mid = 规划与写测;top = 实现与仲裁。
 models:
-  scout: haiku
+  scout: sonnet
   secretary: haiku
   planner: sonnet
   ut_writer: sonnet
@@ -23,7 +23,7 @@ limits:
   soft_loc: 400
   hard_factor: 1.5
   tick_wall_min: 180
-  role_wall_min: 60
+  role_wall_min: 25
   # Optional fast-loop circuit breakers. Roles not listed here are bounded by
   # role_wall_min and the daily model budget, but have no turn-count cap.
   role_max_turns:
@@ -72,8 +72,12 @@ ttl:
   claim_hours: 24
 
 quota:
-  wip_mrs: 1
-  agent_tickets_per_day: 2
+  # 2026-08-02 按实测校准(推理见 loop-engr 仓 .loop/config.yaml 同段)。
+  # wip_mrs 的刻度是审阅带宽,不是流水线能力;6 是开发期的值,上生产要按
+  # 团队真实审阅速度重设。agent_tickets_per_day 2 在一轮 15 分钟的节奏下
+  # 半小时就用光,那一天为它手工清了六次计数。
+  wip_mrs: 6
+  agent_tickets_per_day: 20
   grill_questions: 8
   grill_rounds: 2
   lessons_cap: 50
@@ -89,7 +93,7 @@ quota:
 budget:
   daily_tokens:
     claude-opus-5: 2000000
-    claude-sonnet-5: 8000000
+    claude-sonnet-5: 20000000
     claude-haiku-4-5-20251001: 20000000
   # 网关的 costUSD 经过核对后可同时启用；任一额度触顶即停。
   daily_usd: {}
