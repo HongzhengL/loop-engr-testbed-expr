@@ -20,8 +20,8 @@ floors:
     github.com/expr-lang/expr/parser/lexer: 0.81
     github.com/expr-lang/expr/parser/operator: 0
     github.com/expr-lang/expr/parser/utils: 0
-    github.com/expr-lang/expr/patcher: 0.16
-    github.com/expr-lang/expr/patcher/value: 0.44
+    github.com/expr-lang/expr/patcher: 0.93
+    github.com/expr-lang/expr/patcher/value: 0.55
     github.com/expr-lang/expr/repl: 0
     github.com/expr-lang/expr/types: 0.52
     github.com/expr-lang/expr/vm: 0.62
