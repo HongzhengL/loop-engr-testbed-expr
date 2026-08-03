@@ -26,5 +26,5 @@ floors:
     github.com/expr-lang/expr/types: 0.52
     github.com/expr-lang/expr/vm: 0.62
     github.com/expr-lang/expr/vm/func_types: 0
-    github.com/expr-lang/expr/vm/runtime: 0.36
+    github.com/expr-lang/expr/vm/runtime: 0.75
     github.com/expr-lang/expr/vm/runtime/helpers: 0
