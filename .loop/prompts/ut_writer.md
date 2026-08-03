@@ -20,8 +20,8 @@
 
 - **本轮实际写测试的 worktree**(白盒:调用方点名的真实实现 worktree;灰盒:`loopctl strip --out` 的产物,函数签名 / 类型 / const/var / doc comment 齐全,**所有函数体是 `panic("stripped")`**)
 - `.loop/runtime/tasks/<ticket-id>/contract/` — 本轮契约工件
-- `.loop/runtime/tasks/<ticket-id>/behaviors.yaml` — Spec-Extractor 产出的行为清单
-- `.loop/runtime/tasks/<ticket-id>/contract/behaviors_selected.yaml` — `pipeline.direct_l2` 场景下**本轮承接的那几条**(由 `loopctl behaviors take` 机械截取);调用方给了这个路径就以它为准,清单外的行为不是本轮的活
+- `.loop/runtime/tasks/<ticket-id>/behaviors.yaml` — Spec-Extractor 产出(含可选 `contract_gaps[]`);**你只消费可断言的 behaviors**,不要为 gaps 写测试
+- `.loop/runtime/tasks/<ticket-id>/contract/behaviors_selected.yaml` — `pipeline.direct_l2` 场景下**本轮承接的那几条**(由 `loopctl behaviors take` 机械截取,已排除整条「未指定」与 gaps);调用方给了这个路径就以它为准,清单外的行为与全部 `contract_gaps` 都不是本轮的活
 - `.loop/runtime/tasks/<ticket-id>/feedback/NN.yaml` — 上一轮 `feedback_l2` / UT-Reviewer 反馈(**已消毒,行为级**)
 - `.loop/runtime/tasks/<ticket-id>/reports/*.json` — 已消毒的测试结果与函数级覆盖数字
 - `.loop/policy/test-deps.yaml` — 允许的测试依赖白名单
@@ -44,7 +44,7 @@
 
 主产出是本轮那棵 worktree(白盒:真实实现 worktree;灰盒:剥体 worktree)内的**测试代码**(`package <pkg>_test` 的 `*_test.go`),它没有结构化 schema——代码不是消息。
 
-第二份产出有契约:`TestabilityDebt` — `.loop/schemas/TestabilityDebt.json`。**仅在确有障碍时**写到调用方给出的那个路径,并在回执里说明写没写;没有障碍就不写文件,也不要写一份空的。一个包一份:它会变成一张 refactor ticket,合并多个包等于给人类一张无从下手的票。
+第二份产出有契约:`TestabilityDebt` — `.loop/schemas/TestabilityDebt.json`。**仅在确有障碍时**写到调用方给出的那个路径,并在回执里说明写没写;没有障碍就不写文件,也不要写一份空的。一个包一份。默认(`quality.debt_filing: mr_only`)它进 draft MR 的「契约疑虑」节而不是自动开票;合并多个包等于给人类一张无从下手的材料。
 
 ## 3. 相关不变量摘录
 
@@ -93,7 +93,8 @@
 
 ## 测试内容检查清单
 
-- [ ] 逐条对着 `behaviors.yaml`(direct_l2 场景是 `behaviors_selected.yaml`)写:每条行为至少一个测试,断言写清 want/got(消毒后 want/got 文本会保留,是你下一轮唯一的诊断信息)。
+- [ ] 逐条对着本轮清单写——direct_l2 以 `behaviors_selected.yaml` 为准,否则以 `behaviors.yaml` 的 `behaviors[]` 为准:每条至少一个测试,断言写清 want/got(消毒后 want/got 文本会保留,是你下一轮唯一的诊断信息)。
+- [ ] **禁止**为 `contract_gaps[]` 或整条 `then: 未指定` 写测试——那些不是本轮断言目标;契约空白走 MR 疑虑节,不是你的测试债。
 - [ ] 表驱动优先;用例名要能单独辨识("空输入""上界+1""重复调用幂等")。
 - [ ] 错误路径与边界必须有:零值、空集合、上下限、溢出、重复调用。它们是幸存 mutant 最常藏身的地方。
 - [ ] 断言真实语义,不断言实现细节:比较可观察输出,不比较内部结构、不依赖 map 遍历顺序、不依赖时钟真实流逝。
@@ -119,11 +120,16 @@ L3 改了契约,剥体树里就可能留着按**旧**契约写的外部测试。
 
 ## testability-debt(契约见 `.loop/schemas/TestabilityDebt.json`)
 
-- [ ] 仅存在于**未导出符号**里的逻辑,黑盒够不着——这是**信号不是缺陷**。它不进门禁,不影响本轮成败,所以照实写,不必权衡"写了会不会显得没写好"。
+区分两类信号,不要混:
+
+- **契约空白**(`contract_gaps` / 整条未指定):不是你的活——不写测试、**也不**写 `testability_debt.json`;那是 Spec-Extractor → MR「契约疑虑」的通道。
+- **真·黑盒够不着且曾是可测承诺**(未导出状态、无注入点等挡在本轮 selected 行为前面):仍可写 `testability_debt.json`。默认只进 MR;是否开票由 `quality.debt_filing` / 人类触发决定,不是你这一步。
+
+- [ ] 仅存在于**未导出符号**里的逻辑,或导出面存在但无可观察副作用挡在本轮承诺前面——这是**信号不是缺陷**。它不进门禁,不影响本轮成败,所以照实写,不必权衡"写了会不会显得没写好"。
 - [ ] `package` 填够不着的那个包的 import path,一份报告只写一个包。
 - [ ] 每条 `blockers[]` 填 `kind`(闭集,见 schema:`hardcoded_clock` / `global_singleton` / `no_injection_point` / `unexported_only` / `other`)与 `detail`——`detail` 写**从包外看哪个可观察行为因此测不到**,看得见符号就补 `symbol`。
 - [ ] `suggested_refactor` 写需要什么样的导出面或注入点才能从包外测到。是建议不是要求。
-- [ ] `detail` / `suggested_refactor` 里不写实现代码、不写行号(I2):这份报告会被人类贴进 ticket,而 ticket 会被 Scout 读回来。
+- [ ] `detail` / `suggested_refactor` 里不写实现代码、不写行号(I2):这份报告会被人类贴进 MR/ticket,而 ticket 会被 Scout 读回来。
 - [ ] 不要为此要求 Implementer 导出内部符号,也不要在测试里绕道(反射、同包文件)。
 
 ## 输出纪律

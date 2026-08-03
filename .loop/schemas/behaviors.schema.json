@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:loop-engr:schema:behaviors",
   "title": "behaviors",
-  "description": "Spec-Extractor 产出的 behaviors.yaml 的契约。它是 YAML 工件而非 agent 之间传递的消息,故文件名带 .schema 以示区分;校验对象是 YAML 解析后的结构。内容直接喂给 UT-Writer,因此必须行为级——源是剥体树,只要不推测实现就不可能泄漏。",
+  "description": "Spec-Extractor 产出的 behaviors.yaml 的契约。它是 YAML 工件而非 agent 之间传递的消息,故文件名带 .schema 以示区分;校验对象是 YAML 解析后的结构。behaviors[] 只含可断言承诺,直接喂给 UT-Writer / take / gate;contract_gaps[] 是契约空白与不可观察项,出口是 draft MR 的「契约疑虑」节,不进 selected、不进覆盖门禁、默认不开票。",
   "type": "object",
   "additionalProperties": false,
   "required": ["behaviors"],
   "properties": {
     "behaviors": {
       "type": "array",
-      "description": "可从包外观察的行为,一条一断言。direct_l2 取前 K 条,K = config.quality.k_behaviors。",
+      "description": "可从包外观察、且 then 有明确可观察结果的行为,一条一断言。direct_l2 取前 K 条,K = config.quality.k_behaviors。整条结果未指定或黑盒不可观察的条目不得放这里——进 contract_gaps[]。",
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -51,12 +51,71 @@
           "then": {
             "type": "string",
             "minLength": 1,
-            "description": "期望的可观察结果:返回值 / 错误 / 副作用。未指定的行为写\"未指定\",不写\"应当\"——臆造出来的承诺会变成 writer 断言不出来的测试。"
+            "description": "期望的可观察结果:返回值 / 错误 / 副作用。必须是可断言的承诺。整条结果未指定(then 以「未指定」为主结果)不得再作为 behaviors[] 条目——写入 contract_gaps[],kind: unspecified。"
           },
           "source": {
             "type": "string",
             "enum": ["doc", "ticket", "signature"],
             "description": "这条行为的硬度来源:doc = doc comment 的承诺;ticket = ticket 正文/回答;signature = 由签名与类型推出。下游据此判断能多信它。"
+          }
+        }
+      }
+    },
+    "contract_gaps": {
+      "type": "array",
+      "description": "契约空白与不可观察项。可选;缺省视为 []。不参与 behaviors take、behaviors coverage、gate behaviors;出口是 draft MR 的「契约疑虑」节(默认不开票)。id 由 normalize 从 symbol+name 派生,算法与 behaviors[] 相同。",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["symbol", "name", "kind", "given", "when", "note", "source"],
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)?$",
+            "description": "相关导出符号原文。"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)+$",
+            "description": "由 normalize 派生,算法同 behaviors[].id。便于 MR / 跨 tick 去重。非必填。"
+          },
+          "collision": {
+            "type": "boolean",
+            "description": "本条 id 与另一条 contract_gaps 撞了。由 normalize 写入。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 _-]*$",
+            "description": "ASCII 短语概括,与 behaviors[].name 同约束,供 id 派生稳定。"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["unspecified", "unobservable"],
+            "description": "unspecified:签名/doc 未约定期望语义(契约空白);unobservable:导出 API 存在但无可观察副作用(如只写未导出包变量),黑盒够不着。"
+          },
+          "given": {
+            "type": "string",
+            "minLength": 1,
+            "description": "前提:输入取值或状态。"
+          },
+          "when": {
+            "type": "string",
+            "minLength": 1,
+            "description": "触发:调用哪个导出符号、怎么调。"
+          },
+          "note": {
+            "type": "string",
+            "minLength": 1,
+            "description": "给人看的说明——不是 then 断言。写清为何空白/不可观察、请确认什么。"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["doc", "ticket", "signature"],
+            "description": "硬度来源,同 behaviors[].source。"
           }
         }
       }

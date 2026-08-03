@@ -202,7 +202,7 @@
         "additionalProperties": false,
         "required": ["package", "ticket", "open", "failed"],
         "properties": {
-          "package": { "type": "string", "minLength": 1, "description": "包 import path,与 coverage.pkgs[].name 同一口径(两者要 join)。" },
+          "package": { "type": "string", "minLength": 1, "description": "包 import path,与 coverage.pkgs[].name 同一口径。可与本次 pkgs[] 不完全重叠:残缺 cover 缓存可能测不到该包;不得为了对齐而往 pkgs 补 null 行。pick pkg 用它做复用/出局,不要求每条都有 cov 读数。" },
           "ticket": { "type": "string", "minLength": 1, "description": "平台上的 ticket 标识。它就是 direct_l2 的任务 id。" },
           "open": { "type": "boolean", "description": "该 ticket 当前处于开启状态。已关闭的照实填 false:它不再可复用,该包重新可选。" },
           "failed": { "type": "boolean", "description": "该 ticket 带着 `<labels_prefix>attempted-failed:*`——上一次尝试失败的记忆。单列成字段是因为它是选包的排除依据,而排除依据不该是一次字符串匹配。" }

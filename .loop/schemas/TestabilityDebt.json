@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:loop-engr:schema:TestabilityDebt",
   "title": "TestabilityDebt",
-  "description": "UT-Writer 的第二份产出:黑盒够不着的逻辑。它是**信号不是缺陷**——仅存在于未导出符号里的逻辑,外部测试包在构造上就到不了,这不是测试没写好。消费者是 Secretary 的 refactor 开票链路(打 <labels_prefix>agent-filed,受 quota.agent_tickets_per_day)。一份报告 = 一个包 = 一张票:package 是单值不是列表,这条粒度由字段形状定死。本契约不进 gate,不影响本轮成败。",
+  "description": "UT-Writer 的第二份产出:黑盒够不着的逻辑。它是**信号不是缺陷**——仅存在于未导出符号里的逻辑,或挡在可测承诺前面的可测性障碍,外部测试包在构造上就到不了,这不是测试没写好。默认消费者是 draft MR 的「契约疑虑」节(`quality.debt_filing: mr_only`);开票仅当 debt_filing 含 ticket,或人类触发。一份报告 = 一个包。本契约不进 gate,不影响本轮成败。契约空白(整条未指定)不走本文件——那是 behaviors.yaml 的 contract_gaps[]。",
   "type": "object",
   "additionalProperties": false,
   "required": ["package", "blockers", "suggested_refactor"],

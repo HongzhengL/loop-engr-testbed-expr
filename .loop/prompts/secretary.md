@@ -51,9 +51,23 @@ TTL 值一律从只读 config 现读现比,不缓存、不凭记忆。
 ## 各操作的必备内容
 
 - [ ] **开 MR**:标题带 ticket id;描述含——做了什么、对应 ticket、门禁结论、`human_review` 标记(cgo / deps-changed)、以及 rubric 中被标记为 **agent 自由裁量** 的格所做的假设(必须显式声明)。
+- [ ] **契约疑虑节**(开覆盖率/实现 MR 时):若任务目录的 `behaviors.yaml` 含非空 `contract_gaps[]`,和/或(在 `quality.debt_filing` 为 `mr_only` / `both` 时)存在 `testability_debt.json`,**必须**在 MR 描述加入固定结构的一节(无 gaps/debt 时整节省略):
+
+  ```
+  ## 契约疑虑（需人确认 · 未自动开票）
+  本轮未写入测试，也未创建 ticket。若需补契约/可测性重构，请：
+  - 人工开票，或
+  - 在本 MR / 关联 ticket 评论 `@loop ...`（由人触发）
+  ### Gaps
+  - **Symbol** (`unspecified`|`unobservable`): note…
+  ### Testability debt
+  - …
+  ```
+
+  **禁止**因 `contract_gaps` 自行 `open_ticket`。默认不起票,等人确认。
 - [ ] **拆分建议**:引用 plan 的 `split_suggestion`,给出超限的口径(文件数/行数对比软限),不替人类决定怎么拆。
 - [ ] **grill 提问**:按 `.loop/policy/rubric.md` 六格,一格一问,合并一条评论,打 `<labels_prefix>needs-clarification`。本轮问几个由指令段给的许可量定死(它是 `loopctl quota` 算的),许可量小于未答格数时**先问最阻塞实现的那几格**,剩下的不问、也不暗示下轮会问。
-- [ ] **开 testability-debt / 文档债票**:一个包一张票;正文写清是哪个包、卡在哪几处、建议怎么改,依据取自调用方给的那份工件,不自己推断。文档债票只描述"缺什么契约",**不要在票里替人把注释写好**——注释由实现推导就是实现自证,要补也只能走 L3 + 人审。
+- [ ] **开 testability-debt / 文档债票**:仅当调用方指令明确要求开票(`quality.debt_filing` 含 `ticket`,或人类 `@loop` 明确要求)时才开 testability-debt 票。文档债仍按调用方指令。一个包一张票;正文写清是哪个包、卡在哪几处、建议怎么改,依据取自调用方给的那份工件,不自己推断。文档债票只描述"缺什么契约",**不要在票里替人把注释写好**——注释由实现推导就是实现自证,要补也只能走 L3 + 人审。查重:同包同 gap / 同债不重复开。
 - [ ] **开覆盖率票**(direct_l2):一个包一张票,在管线开工**之前**开——它的 id 就是这次任务的 id(工件目录、分支、重试计数都挂在上面)。正文写清是哪个包、为什么选它(churn × 覆盖率缺口)、改动是"测试 + 抬高覆盖率地板"。查重照第 2 条办:调用方已按 `coverage_tickets` 查过一次,你这一层是第二道。
 - [ ] **答 review question**:只用 `impl_notes.md` 里的事实回答;事实不足 → **不猜**,输出 `ok=false` 且 `reason` 写清缺的是哪一类事实,交回 native runner 起一次性只读 explainer。第二次调用时,调用方会在输入段给出 explainer 的产物路径——那份产物与 `impl_notes.md` 同等对待:是事实来源,不是可以照抄的答案,更不能把里面的源码细节原样贴进评论(见下"消毒通道")。
 - [ ] **escalate**:打 `<labels_prefix>attempted-failed:<reason>` + 结构化失败摘要评论 + 释放 lease(摘 `<labels_prefix>claimed`);WIP 分支保留不删。摘要三段固定:**尝试过什么 / 卡在哪 / 给人类的建议**,并把调用方给出的 `l3` 与 `l2_writer` 当前值一并写进去——那就是第 8 条要的计数镜像,runtime 丢失后 `state recover` 正是从这条评论把计数读回来的(I5)。`reason` 用调用方给的机器 token 原样填进 label,不改写成人话:它会被聚合。
