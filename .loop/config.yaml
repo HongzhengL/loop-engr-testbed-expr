@@ -23,7 +23,7 @@ limits:
   soft_loc: 400
   hard_factor: 1.5
   tick_wall_min: 180
-  role_wall_min: 25
+  role_wall_min: 45
   # Optional fast-loop circuit breakers. Roles not listed here are bounded by
   # role_wall_min and the daily model budget, but have no turn-count cap.
   role_max_turns:
